@@ -71,9 +71,11 @@ function createWindow () {
   ipcMain.on('load-recent', (event,clips) => {
     if (clips instanceof Array) {
       if (clips.length > 0) {
-        stack = clips
-        tray.setContextMenu(Menu.buildFromTemplate(formatMenuTemplateForStack(stack)))
-        registerShortcuts(globalShortcut, clipboard, stack)
+        if (tray) {
+          stack = clips
+          tray.setContextMenu(Menu.buildFromTemplate(formatMenuTemplateForStack(stack)))
+          registerShortcuts(globalShortcut, clipboard, stack)
+        }
       }
     }
   })
@@ -136,7 +138,7 @@ function addToStack(clipboard, stack) {
   let item = {
     text: clipboard.readText(),
     format: format
-  };
+  }
   if (format === 'html') {
     let html = clipboard.readHTML();
     if (html !== item.text) {

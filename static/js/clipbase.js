@@ -174,7 +174,7 @@ function getSnippets(filter) {
 class Clip {
   constructor(first, format, html = '', index = 0) {
     if (typeof first == 'string' && typeof format == 'string') {
-      this.text = text
+      this.text = first
       this.format = format
       this.html = html
       this.id = index
@@ -193,15 +193,15 @@ class Clip {
       if (first.id) {
         this.id = first.id
       }
+      if (first.hasOwnProperty('tags') && first.tags instanceof Array) {
+        this.tags = first.tags
+      } else {
+        this.tags = []
+      }
     }
     this.hasHtml = this.validHtml()
     if (!this.hasHtml) {
       this.html = ''
-    }
-    if (tags instanceof Array) {
-     this.tags = tags
-    } else {
-      this.tags = []
     }
   }
 
