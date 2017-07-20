@@ -26,7 +26,11 @@
       <form id="edit-form" :class="editClasses" v-on:submit.prevent="saveItem()">
         <button v-on:click.stop="closeOverlay()" class="close">x</button>
         <textarea id="item-text-edit" v-model="editText" v-focus="editFocus"></textarea>
-        <button id="item-text-save">Save</button>
+        <fieldset class="button-bar">
+          <button id="item-text-save">Save</button>
+          <button id="item-copy" v-on:click.prevent="copyText(currIndex)">Copy</button>
+          <button id="item-delete" v-on:click.prevent="deleteItem(editIndex, editMode)">Delete</button>
+        </fieldset>
       </form>
       
     </div>

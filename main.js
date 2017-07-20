@@ -63,10 +63,13 @@ function createWindow () {
     // when you should delete the corresponding element.
     mainWindow = null
   })
-  const tray = new Tray( path.join('static','images', 'tray-icon.png') )
+  const tray = new Tray( path.join('static','images', 'clipbase-16.png') )
   tray.setContextMenu(Menu.buildFromTemplate([{
-    label: '<empty>',
-    enabled: false
+    label: 'Open',
+    click: function () {
+
+    },
+    enabled: true
   }]))
   ipcMain.on('load-recent', (event,clips) => {
     if (clips instanceof Array) {

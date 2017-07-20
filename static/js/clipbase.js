@@ -293,9 +293,13 @@ const vue = new Vue({
           if (this.numClips >= this.config.maxClips) {
             this.clips.pop()
           }
-          this.clips.unshift(clip)
-          storeItem('clips', this.clips)
-          this.numClips = this.clips.length
+          if (this.numClips > 0 && clip.text === this.clips[0].text) {
+            this.clips[0] = clip
+          } else {
+            this.clips.unshift(clip)
+            storeItem('clips', this.clips)
+            this.numClips = this.clips.length
+          }      
         }
       }
     })
@@ -326,18 +330,27 @@ const vue = new Vue({
       }
       
     }, false)
-    let recentClips = []
-    if (this.clips.length < 10) {
-      recentClips = this.clips
-    } else {
-      recentClips = this.clips.slice(0,9)
-    }
-    if (recentClips.length > 0) {
-      ipcRenderer.send('load-recent',recentClips)
-    }
+
+    addEventListener('keydown', (e) => {
+      let cName = e.code.toLowerCase()
+      switch (cName) {
+        case 'escape':
+          vue.closeOverlay()
+          break;
+      }
+    })
     setTimeout(_ => {
       let sn = new Clip('some text','html',"<strong>some text</strong>")
       storeSnippet(sn)
+      let recentClips = []
+      if (vue.clips.length < 10) {
+        recentClips = vue.clips
+      } else {
+        recentClips = vue.clips.slice(0,9)
+      }
+      if (recentClips.length > 0) {
+        ipcRenderer.send('load-recent',recentClips)
+      }
     }, 1000)
   },
   watch: {
@@ -388,6 +401,9 @@ const vue = new Vue({
           clip.html = this.cleanHtmlString(clip.html)
         }
         ipcRenderer.send('copy-' + format, clip)
+        if (this.editClasses.indexOf('overlay') > -1) {
+          this.closeOverlay()
+        }
       }
     },
     deleteClip: function(index) {
@@ -411,6 +427,7 @@ const vue = new Vue({
           this.numClips = items.length
         }
       }
+      this.closeOverlay()
     },
     addActive: function(index,mode) {
       this.currIndex = index
