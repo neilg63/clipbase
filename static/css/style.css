@@ -1,0 +1,266 @@
+#app,
+body {
+	margin: 0 auto;
+	padding: 0;
+}
+
+body {
+	font-family: caption, Helvetica, Arial, sans-serif;
+  font-size:  16px;
+}
+
+#app nav.title-strip {
+  position: fixed;
+  text-align: center;
+  margin:  0;
+  top:  0;
+  left:  0;
+  right:  0;
+  height:  1.333em;
+  background-color:  white;
+  z-index: 20;
+  border-bottom: solid 1px #eeeeee;
+}
+
+#app nav.title-strip input {
+  width:  97%;
+  border:  none;
+  font-size: 1.25em;
+  padding: 0.125em 1.5%;
+  background: none;
+}
+
+@media (max-width: 300px) {
+  #app {
+    font-size: 0.75em;
+  }
+}
+
+@media (min-width: 301px) and (max-width: 450px) {
+  #app {
+    font-size: 0.875em;
+  }
+}
+
+@media (min-width: 451px) and (max-width: 570px) {
+  #app {
+    font-size: 0.9375em;
+  }
+}
+
+@media (min-width: 571px) and (max-width: 680px) {
+  #preview {
+    left: 27.5%;
+  }
+}
+
+@media (min-width: 681px) and (min-width: 750px) {
+  #app {
+    font-size: 1.1em;
+  }
+  #preview {
+    left: 30%;
+  }
+}
+
+@media (min-width: 751px) {
+  #app {
+    font-size: 1.2em;
+  }
+  #preview {
+    left: 32.5%;
+  }
+}
+
+ul {
+  list-style-type: none;
+  -webkit-margin-before:0;
+  -webkit-margin-after: 0;
+  -webkit-margin-start: 0;
+  -webkit-margin-end: 0;
+  -webkit-padding-start: 0;
+  padding: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+ul, li {
+	list-style: none;
+	margin: 0;
+	position: relative;
+}
+
+section.board {
+  position: relative;
+  margin: 2em 0 0 0;
+  padding:  0 0 10em 0;
+}
+
+.items {
+  width: 100%;
+}
+
+.items li {
+	padding: 0;
+	width: 100%;
+	clear: both;
+	border-bottom: solid #dddddd 1px;
+  max-height: 2em;
+  overflow: hidden;
+  transition: max-height .5s ease-in;
+}
+
+.items li:hover {
+  cursor: pointer;
+  overflow-x: hidden;
+}
+
+.items li > span.text {	
+	color: #666666;
+	display: block;
+	padding: 0.25em 2.5em 0.25em 1.5em;
+}
+
+.items li button {
+	opacity: 0;
+	position: absolute;
+	top: 0em;
+	transition: opacity 125ms ease-in;
+	font-size: 1.25em;
+  transition: color 0.25s ease-in;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.items li.hidden,
+.items li.hidden:hover, 
+.items li:hover span .short-text,
+.items li span .long-text {
+  display:  none;
+}
+
+.items li span .short-text {
+  display:  inline-block;
+  width:  100%;
+}
+
+#preview {
+  position: fixed;
+  margin: 0;
+  bottom: 0;
+  left: 25%;
+  right: 0;
+  padding:  0.25em;
+  background-color:  white;
+  border-top: solid 1px #cccccc;
+  border-left: solid 1px #cccccc;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease-in;
+  max-height: calc(100vh - 2em);
+  min-height: 3em;
+}
+
+#preview > .preview-inner {
+  position: relative;
+  padding: 0.25em;
+  margin: -2.5% -9%;
+  top: 0.5em;
+  transform: scale(0.8);
+  min-height: 2em;
+}
+
+#preview.pre {
+  white-space: pre;
+}
+
+#preview.show {
+  z-index: 40;
+  pointer-events: all;
+  opacity: 1;
+}
+
+.items li .text > span {
+  pointer-events: none;
+}
+
+.items li.text .long-text {
+  white-space: pre;
+}
+
+.items li button.copy {
+  left: 0.125em;
+}
+
+.items li button.delete {
+	right: 0.25em;
+}
+
+.items li button.add {
+  right: 1.5em;
+}
+
+.items li button.delete:hover {
+  color: red;
+}
+
+.items li button.add:hover {
+  color: green;
+}
+
+.clips li:hover {
+	background-color: #ddffff;
+}
+
+.snippets li:hover {
+  background-color: #eeffee;
+}
+
+.items li:hover > span {
+	color: black;
+}
+
+.items li:hover button {
+	opacity: 1;
+}
+
+#edit-form {
+  position: fixed;
+  top: 1.5em;
+  padding: 1.75em 0 0 0;
+  left:  0;
+  right:  0;
+  bottom: 0;
+  z-index:  -1;
+  pointer-events: none;
+  opacity: 0;
+  background-color: rgba(255,255,255,0.75); 
+}
+
+#edit-form button.close {
+  position: absolute;
+  top: 0;
+  right: 0.25em;
+  font-size: 1.5em;
+  background: none;
+  border:  none;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+#edit-form button.close:hover {
+  color:  red;
+}
+
+#edit-form.overlay {
+  z-index: 40;
+  opacity: 1;
+  pointer-events: all;
+}
+
+#edit-form textarea {
+  width:  100%;
+  min-height: 8em;
+}
