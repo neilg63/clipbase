@@ -412,6 +412,12 @@ const vue = new Vue({
             menu.items[2].enabled = true
             menu.items[3].enabled = true
           }
+          menu.items[4].enabled = false
+          if (clip.hasOwnProperty('title')) {
+            if (clip.title.length >2) {
+              menu.items[4].enabled = true
+            }
+          }
           menu.popup(remote.getCurrentWindow())
         }
       }
