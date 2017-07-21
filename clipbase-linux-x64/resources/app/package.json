@@ -1,0 +1,23 @@
+{
+  "name": "clipbase",
+  "version": "1.0.0",
+  "description": "Clipboard manager with multiple snippet collections",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": "https://github.com/neilg63/clipbase",
+  "keywords": [
+    "Electron",
+    "quick",
+    "start"
+  ],
+  "author": "Neil Gardner",
+  "license": "CC0-1.0",
+  "devDependencies": {
+    "electron": "~1.6.2"
+  },
+  "dependencies": {
+    "electron-window-state": "^4.1.1"
+  }
+}

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Clip Base</title>
+    <script src="./static/js/vue.min.js" type="text/javascript"></script>
+    <script src="./static/js/vue-focus.min.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="./static/css/style.css">
+  </head>
+  <body>
+    <div id="app">
+      <nav class="title-strip" :title="numClipsLabel">
+        <input type="text" id="text-filter" size="40" v-model="textFilter" v-focus="!editFocus" placeholder="Type to filter clips" v-on:dblclick.prevent="clearFilter()" />
+      </nav>
+      <section class="board" v-on:mouseleave="hidePreview()">
+        <ul class="items clips">
+          <li v-for="(clip,index) in clips" :class="clip.classes" v-on:mouseover.stop="addActive(index,'clips')"><button class="copy" v-on:click.stop="copyText(index)">&laquo;</button><span class="text" v-on:click.stop="editClip(index)" :title="config.clipHint">{{clipShort(clip)}}</span> &nbsp; <button class="add" v-on:click.stop="addToSnippets(index)">+</button><button class="delete" v-on:click.stop="deleteClip(index)">x</button></li>
+        </ul>
+        <ul class="items snippets">
+          <li v-for="(clip,index) in snippets" :class="clip.classes" v-on:mouseover.stop="addActive(index,'snippets')"><button class="copy" v-on:click.stop="copyText(index)">&laquo;</button><span class="text" v-on:click.stop="editSnippet(index)" :title="config.clipHint">{{clipShort(clip)}}</span><button class="delete" v-on:click.stop="deleteSnippet(index)">x</button></li>
+        </ul>
+        <aside id="preview" :class="previewClasses">
+          <div v-html="previewText" class="preview-inner inner"></div>
+        </aside>
+      </section>
+      <form id="edit-form" :class="editClasses" v-on:submit.prevent="saveItem()">
+        <button v-on:click.stop="closeOverlay()" class="close">x</button>
+        <textarea id="item-text-edit" v-model="editText" v-focus="editFocus"></textarea>
+        <fieldset class="button-bar">
+          <button id="item-text-save">Save</button>
+          <button id="item-copy" v-on:click.prevent="copyText(currIndex)">Copy</button>
+          <button id="item-delete" v-on:click.prevent="deleteItem(editIndex, editMode)">Delete</button>
+        </fieldset>
+      </form>
+      
+    </div>
+  </body>
+
+  <script>
+    // You can also require other files to run in this process
+    require('./renderer.js')
+  </script>
+  <script src="./static/js/clipbase.js" type="text/javascript"></script>
+</html>
