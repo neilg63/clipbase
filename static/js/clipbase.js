@@ -240,6 +240,7 @@ const vue = new Vue({
     snippetsLibs: [],
     numSnippets: 0,
     numClipsLabel: '',
+    recopied: false,
     currIndex: 0,
     editIndex: -1,
     viewMenu: false,
@@ -282,7 +283,7 @@ const vue = new Vue({
       }
     }
     ipcRenderer.on('clip-stack', (event, clip) => {
-      if (clip instanceof Object && clip.hasOwnProperty('text')) {
+      if (vue.recopied === false && clip instanceof Object && clip.hasOwnProperty('text')) {
         clip.hasHtml = this.validHtml(clip)
         clip.classes = clip.hasHtml? ['html'] : ['text']
         let firstClip = {text: ''}
@@ -301,6 +302,14 @@ const vue = new Vue({
             this.numClips = this.clips.length
           }      
         }
+      }
+    })
+    ipcRenderer.on('recopied',(status) => {
+      if (status) {
+        vue.recopied = true
+        setTimeout(_ => {
+          vue.recopied = false
+        }, 500)
       }
     })
     window.addEventListener('contextmenu', (e) => {
@@ -385,8 +394,9 @@ const vue = new Vue({
       this.copyItem(index,'html','simple')
     },
     copyItem: function(index,format, transform) {
-      if (this.clips.length > index && index >= 0) {
-        let clip = this.clips[index]
+      let items = this.mode === 'snippets'? this.snippets : this.clips
+      if (items.length > index && index >= 0) {
+        let clip = items[index]
         if (transform) {
           switch (transform) {
             case 'lower':
@@ -432,6 +442,7 @@ const vue = new Vue({
     addActive: function(index,mode) {
       this.currIndex = index
       let items = mode == 'snippets'? this.snippets : this.clips
+      this.mode = mode
       if (index < items.length) {
         let item = items[index]
         this.previewText = this.clipLong(item)

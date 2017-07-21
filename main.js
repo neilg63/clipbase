@@ -181,6 +181,7 @@ function formatMenuTemplateForStack(stack) {
     return {
       label: `${formatItem(item.text)}`,
       click: _ => {
+        mainWindow.webContents.send('recopied',true)
         clipboard.writeText(item.text.trim())
       }
     }

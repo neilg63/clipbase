@@ -17,7 +17,7 @@
           <li v-for="(clip,index) in clips" :class="clip.classes" v-on:mouseover.stop="addActive(index,'clips')"><button class="copy" v-on:click.stop="copyText(index)">&laquo;</button><span class="text" v-on:click.stop="editClip(index)" :title="config.clipHint">{{clipShort(clip)}}</span> &nbsp; <button class="add" v-on:click.stop="addToSnippets(index)">+</button><button class="delete" v-on:click.stop="deleteClip(index)">x</button></li>
         </ul>
         <ul class="items snippets">
-          <li v-for="(clip,index) in snippets" :class="clip.classes" v-on:mouseover.stop="addActive(index,'snippets')"><button class="copy" v-on:click.stop="copyText(index)">&laquo;</button><span class="text" v-on:click.stop="editSnippet(index)" :title="config.clipHint"><{{clipShort(clip)}}></span><button class="delete" v-on:click.stop="deleteSnippet(index)">x</button></li>
+          <li v-for="(clip,index) in snippets" :class="clip.classes" v-on:mouseover.stop="addActive(index,'snippets')"><button class="copy" v-on:click.stop="copyText(index)">&laquo;</button><span class="text" v-on:click.stop="editSnippet(index)" :title="config.clipHint">{{clipShort(clip)}}</span><button class="delete" v-on:click.stop="deleteSnippet(index)">x</button></li>
         </ul>
         <aside id="preview" :class="previewClasses">
           <div v-html="previewText" class="preview-inner inner"></div>
