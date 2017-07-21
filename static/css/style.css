@@ -107,7 +107,7 @@ section.board {
 	border-bottom: solid #dddddd 1px;
   max-height: 2em;
   overflow: hidden;
-  transition: max-height .5s ease-in;
+  transition: background-color 250ms ease-in-out;
 }
 
 .items li:hover {
@@ -211,7 +211,11 @@ section.board {
 }
 
 .clips li:hover {
-	background-color: #ddffff;
+	background-color: #eeffff;
+}
+
+#app .items li.copying {
+  background-color: #ffeeee;
 }
 
 .snippets li:hover {
@@ -229,7 +233,7 @@ section.board {
 #edit-form {
   position: fixed;
   top: 0;
-  padding: 2em 0 0 0;
+  padding: 2em 2.5% 0 2.5%;
   left:  0;
   right:  0;
   bottom: 0;
@@ -254,6 +258,10 @@ section.board {
   border:none;
   margin: 0.25em auto 0.5em auto;
   padding: 0.125em;
+}
+
+#edit-form input.text-full {
+  width: 100%;
 }
 
 #edit-form button.close:hover {

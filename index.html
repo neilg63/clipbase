@@ -5,6 +5,8 @@
     <title>Clip Base</title>
     <script src="./static/js/vue.min.js" type="text/javascript"></script>
     <script src="./static/js/vue-focus.min.js" type="text/javascript"></script>
+    <script src="./static/js/axios.min.js" type="text/javascript"></script>
+    <script src="./static/js/zepto.min.js" type="text/javascript"></script>
     <link rel="stylesheet" href="./static/css/style.css">
   </head>
   <body>
@@ -28,9 +30,18 @@
         <textarea id="item-text-edit" v-model="editText" v-focus="editFocus"></textarea>
         <fieldset class="button-bar">
           <button id="item-text-save">Save</button>
-          <button id="item-copy" v-on:click.prevent="copyText(currIndex)">Copy</button>
+          <button v-if="currItem.hasHtml" id="item-edit-html" v-on:click.prevent="editHtml()">Edit HTML</button>
+          <button id="item-copy-text" v-on:click.prevent="copyText(currIndex)">Copy</button>
+          <button v-if="currItem.hasHtml" id="item-copy" v-on:click.prevent="copyHtml(currIndex)">Copy Full HTML</button>
+          <button v-if="currItem.hasHtml" id="item-copy" v-on:click.prevent="copySimple(currIndex)">Copy Simple HTML</button>
           <button id="item-delete" v-on:click.prevent="deleteItem(editIndex, editMode)">Delete</button>
         </fieldset>
+        <fieldset class="details">
+          <input v-if="currItem.title" id="item-text-edit" v-model="currItem.title" size="80" class="textfield text-full" />
+        </fieldset>
+        <footer id="status-info">
+          <div class="clipbase-size">{{baseSize|fileSize}}</div>
+        </footer>
       </form>
       
     </div>

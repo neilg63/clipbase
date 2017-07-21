@@ -106,28 +106,28 @@ app.on('activate', function () {
   }
 })
 
-ipcMain.on('copy-text', (event,clip) => {
-  recopyClip(clip,'text')
+ipcMain.on('copy-text', (event,text) => {
+  recopyClip(text,'text')
 })
 
 
-ipcMain.on('copy-html', (event,clip) => {
-  recopyClip(clip,'html')
+ipcMain.on('copy-html', (event,text) => {
+  recopyClip(text,'html')
 })
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
 
-function recopyClip(clip, type) {
+function recopyClip(text, type) {
   let currText = clipboard.readText()
-  if (clip.text !== currText) {
+  if (text !== currText) {
     recopied = true
     switch (type) {
       case 'html':
-        clipboard.writeHTML(clip.html)
+        clipboard.writeHTML(text)
         break
       default:
-        clipboard.writeText(clip.text)
+        clipboard.writeText(text)
         break
     }
     setTimeout(_ => {

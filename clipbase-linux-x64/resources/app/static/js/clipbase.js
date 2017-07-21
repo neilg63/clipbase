@@ -11,10 +11,17 @@ const menuTpl = [
     }
   },
   {
-    label: 'Plain HTML',
+    label: 'Simple HTML',
     enabled: true,
     click: (e) => {
       vue.copySimple(vue.currIndex)
+    }
+  },
+  {
+    label: 'HTML Source Code',
+    enabled: true,
+    click: (e) => {
+      vue.copySource(vue.currIndex)
     }
   },
   {
@@ -25,13 +32,22 @@ const menuTpl = [
     }
   },
   {
+    label: 'As Markdown link',
+    enabled: true,
+    click: (e) => {
+      vue.copyMD(vue.currIndex)
+    }
+  },
+  {
     label: 'As lower case',
-    click: (e) => {vue.copyText(vue.currIndex,'lower')
+    click: (e) => {
+      vue.copyText(vue.currIndex,'lower')
     }
   },
   {
     label: 'As UPPER CASE',
-    click: (e) => {vue.copyText(vue.currIndex,'upper')
+    click: (e) => {
+      vue.copyText(vue.currIndex,'upper')
     }
   },
   {
@@ -40,7 +56,6 @@ const menuTpl = [
   {
     label: 'Edit',
     click: (e) => {
-     // remote.getCurrentWindow().inspectElement(rightClickPosition.x, rightClickPosition.y)
       vue.editItem(vue.currIndex)
     }
   },
@@ -48,15 +63,12 @@ const menuTpl = [
   {
     label: 'Archive',
     click: (e) => {
-     // remote.getCurrentWindow().inspectElement(rightClickPosition.x, rightClickPosition.y)
       vue.addToSnippets(vue.currIndex)
     }
   },
   {
     label: 'Delete',
-    click: (e) => {
-     // remote.getCurrentWindow().inspectElement(rightClickPosition.x, rightClickPosition.y)
-      vue.deleteClip(vue.currIndex)
+    click: (e) => {vue.deleteClip(vue.currIndex)
     }
   }
 ];
@@ -76,6 +88,13 @@ const config = {
 
 const menu = Menu.buildFromTemplate(menuTpl)
 
+String.prototype.captureBetweenTags = function(tagName = '') {
+  let rgxStart = new RegExp('<'+tagName+'[^>]*?>','i')
+  let rgxEnd = new RegExp('</'+tagName+'>','i')
+  let parts = this.split(rgxStart)
+  return parts.pop().split(rgxEnd).shift();
+}
+
 function storeItem(key,data) {
   var ts = Date.now() / 1000,sd = ts + ':';
   if (typeof data == 'object') {
@@ -84,12 +103,13 @@ function storeItem(key,data) {
     sd += 'sca:' + data;
   }
   localStorage.setItem(key,sd);
-  return ts;
+  return sd.length;
 }
 
 function getItem(key,maxAge,unit) {
-  var ts = Date.now() / 1000,obj={expired:true,valid:false},data=localStorage.getItem(key);
+  var ts = Date.now() / 1000,obj={expired:true,valid:false,size:0},data=localStorage.getItem(key);
   if (data) {
+    obj.size = data.length;
     parts = data.split(':');
     if (parts.length>2) {
       if (!maxAge) {
@@ -178,12 +198,13 @@ class Clip {
       this.format = format
       this.html = html
       this.id = index
+      this.title = ''
     } else if (typeof first === 'object') {
       if (first.text) {
         this.text = first.text
       }
       if (first.format) {
-        this.text = first.format
+        this.format = first.format
       }
       if (first.html) {
         this.html = first.html
@@ -198,11 +219,15 @@ class Clip {
       } else {
         this.tags = []
       }
+      if (first.title) {
+        this.title = first.title
+      }
     }
     this.hasHtml = this.validHtml()
     if (!this.hasHtml) {
       this.html = ''
     }
+    this.isLink = this.validUrl()
   }
 
   validHtml () {
@@ -212,6 +237,10 @@ class Clip {
       }
     }
     return false
+  }
+
+  validUrl () {
+    return /^https?:\/\/\w+[a-z0-9_-]+(\.[a-z0-9_-]+)+\/?.*?\b$/i.test(this.text.trim())
   }
 
   addTag (tag) {
@@ -225,6 +254,26 @@ class Clip {
     }
   }
 }
+
+Vue.filter('fileSize', function (value) {
+    if (typeof value === 'string' && /^\d+(\.)\d+$/.test(value)) {
+      value = parseFloat(value)
+    }
+    if (typeof value === 'number') {
+      if (value >= (1024 * 1024)) {
+        value = (value / (1024 * 1024)).toFixed(2) + 'MB'
+      } else if (value >= (1024 * 100)) {
+        value = Math.ceil(value / 1024) + 'KB'
+      } else if (value >= (1024 * 20)) {
+        value = (value / 1024).toFixed(1) + 'KB'
+      } else if (value >= 1024) {
+        value = (value / 1024).toFixed(2) + 'KB'
+      } else {
+        value = Math.ceil(value) + ' bytes'
+      }
+    }
+    return value
+})
 
 const vue = new Vue({
   el: '#app',
@@ -257,6 +306,7 @@ const vue = new Vue({
     editClasses: ['hidden'],
     previewText: '',
     previewClasses: ['hidden'],
+    baseSize: 0,
     dummy: {}
   },
   created: function() {
@@ -272,6 +322,7 @@ const vue = new Vue({
         this.clips = stored.data
         this.updateClipClasses()
         this.numClips = this.clips.length
+        this.baseSize = stored.size
       }
     }
     stored = getItem(this.snippetsLib)
@@ -284,23 +335,48 @@ const vue = new Vue({
     }
     ipcRenderer.on('clip-stack', (event, clip) => {
       if (vue.recopied === false && clip instanceof Object && clip.hasOwnProperty('text')) {
-        clip.hasHtml = this.validHtml(clip)
+        clip.hasHtml = vue.validHtml(clip)
         clip.classes = clip.hasHtml? ['html'] : ['text']
         let firstClip = {text: ''}
-        if (this.clips.length) {
-          firstClip = this.clips[0]
+        if (vue.clips.length) {
+          firstClip = vue.clips[0]
         }
-        if (this.clips.text !== firstClip.text) {
-          if (this.numClips >= this.config.maxClips) {
-            this.clips.pop()
+        if (vue.clips.text !== firstClip.text) {
+          if (vue.numClips >= vue.config.maxClips) {
+            vue.clips.pop()
           }
-          if (this.numClips > 0 && clip.text === this.clips[0].text) {
-            this.clips[0] = clip
+          let replace = (vue.numClips > 0 && clip.text === vue.clips[0].text)
+          clip.id = replace? vue.clips.length : vue.clips.length + 1
+          clip = new Clip(clip)
+          if (clip.isLink) {
+            axios.get(clip.text)
+            .then(function (response) {
+              if (response.headers['content-type']) {
+                if (response.headers['content-type'].indexOf('text/html') >= 0) {
+                  let str = response.data
+                  if (typeof str== 'string' && (str.indexOf('<html') >= 0 || str.indexOf('<HTML') >= 0)) {
+                    let title = str.captureBetweenTags('title')
+                    if (typeof title == 'string' && title.trim().length > 1) {
+                      clip.title = title.trim()
+                    }
+                  }
+                }
+              }
+            })
+            .catch(function (error) {
+              console.log(error);
+            });
+          }
+          if (replace) {
+            vue.clips[0] = clip
           } else {
-            this.clips.unshift(clip)
-            storeItem('clips', this.clips)
-            this.numClips = this.clips.length
-          }      
+            vue.clips.unshift(clip)
+          }
+          setTimeout(_ => {
+            console.log(clip)
+          },3000)
+          vue.baseSize = storeItem('clips', this.clips)
+          vue.numClips = vue.clips.length  
         }
       }
     })
@@ -330,9 +406,11 @@ const vue = new Vue({
           if (clip.hasHtml === false) {
             menu.items[1].enabled = false
             menu.items[2].enabled = false
+            menu.items[3].enabled = false
           } else {
             menu.items[1].enabled = true
             menu.items[2].enabled = true
+            menu.items[3].enabled = true
           }
           menu.popup(remote.getCurrentWindow())
         }
@@ -390,29 +468,71 @@ const vue = new Vue({
     copyHtml: function(index) {
       this.copyItem(index,'html')
     },
+    copySource: function(index) {
+      this.copyItem(index,'html','source')
+    },
     copySimple: function(index) {
       this.copyItem(index,'html','simple')
+    },
+    copyMD: function(index) {
+      this.copyItem(index,'text','md')
     },
     copyItem: function(index,format, transform) {
       let items = this.mode === 'snippets'? this.snippets : this.clips
       if (items.length > index && index >= 0) {
         let clip = items[index]
+        let text = ''
         if (transform) {
           switch (transform) {
             case 'lower':
-              clip.text = clip.text.trim().toLowerCase()
+              text = clip.text.trim().toLowerCase()
               break;
             case 'upper':
-              clip.text = clip.text.trim().toUpperCase()
+              text = clip.text.trim().toUpperCase()
+              break;
+            case 'md':
+              let title = clip.title? clip.title : clip.text
+              text = `[${title}](${clip.text})`
               break;
           }
         }
-        if (transform === 'simple') {
-          clip.html = this.cleanHtmlString(clip.html)
+        if (format === 'html') {
+          switch (transform) {
+            case 'source':
+              text = this.cleanHtmlString(clip.html)
+              format = 'text'
+              break
+            case 'simple':
+              text = this.cleanHtmlString(clip.html)
+              break
+          }
         }
-        ipcRenderer.send('copy-' + format, clip)
+        if (text.length < 1) {
+          switch (format) {
+            case 'html':
+              text = clip.html
+              break
+            default:
+              text = clip.text
+              break
+          }
+        }
+        ipcRenderer.send('copy-' + format, text)
+        clip.classes.push('copying')
+        var copiedClip = clip
+        setTimeout(_  => {
+          var index = copiedClip.classes.indexOf('copying'); 
+          copiedClip.classes.splice(index,1)
+        },1000)
         if (this.editClasses.indexOf('overlay') > -1) {
           this.closeOverlay()
+        }
+      }
+    },
+    editHtml: function() {
+      if (this.currItem) {
+        if (this.currItem.hasHtml) {
+          this.editText = this.cleanHtmlString(this.currItem.html)
         }
       }
     },
@@ -430,7 +550,10 @@ const vue = new Vue({
         if (mode === 'snippets') {
           lib = this.snippetsLib
         } 
-        storeItem(lib,items)
+        let size = storeItem(lib,items)
+        if (lib === 'clips') {
+          this.baseSize = size
+        }
         if (mode === 'snippets') {
           this.numSnippets = items.length
         } else {
@@ -473,21 +596,25 @@ const vue = new Vue({
       }
     },
     clipShort: function(clip) {
-      if (clip.text.length > 64) {
-        let words = clip.text.trim().substring(0,70).split(' ')
-        if (words.length > 1) {
-          words.pop()
+      if (typeof clip == 'object' && typeof clip.text == 'string') {
+          if (clip.text.length > 64) {
+          let words = clip.text.trim().substring(0,70).split(' ')
+          if (words.length > 1) {
+            words.pop()
+          }
+          return words.join(' ')
+        } else {
+          return clip.text.trim()
         }
-        return words.join(' ')
-      } else {
-        return clip.text.trim()
       }
     },
     clipLong: function(clip) {
-      if (this.validHtml(clip)) {
-        return clip.html
-      } else {
-        return clip.text
+      if (typeof clip == 'object') {
+        if (this.validHtml(clip)) {
+          return clip.html
+        } else {
+          return clip.text
+        }
       }
     },
     filterItems: function(rgx, empty, mode) {
@@ -515,38 +642,24 @@ const vue = new Vue({
       return false
     },
     cleanHtmlString: function(html) {
-      var wrapper= document.createElement('section');
-      wrapper.innerHTML = html;
-      let els = wrapper.querySelectorAll('*')
-      if (els.length > 0) {
-        let i =0, remove = false, tn;
-        for (i = 0; i < els.length; i++) {
-          if (els[i].tagName) {
-            tn = els[i].tagName.toLowerCase()
-            switch (tn) {
-              case 'meta':
-              case 'script':
-              case 'style':
-              case 'span':
-                remove = true
-                if (tn == 'span') {
-                  remove = (
-                    els[i].hasAttribute('class')
-                    || els[i].hasAttribute('title')
-                    || els[i].hasAttribute('id')
-                    || els[i].hasAttribute('name')
-                  ) 
-                }
-                if (remove) {
-                  els[i].parentNode.removeElement(els[i])
-                }
-                break;
+      if (typeof html == 'string') {
+        var z = Zepto('<section>'+html+'</section>')
+        z.find('meta, script, style').remove()
+        z.find('font > *').unwrap();
+        z.find('*').removeAttr('style');
+        let spans = z.find('span');
+        if (spans.length > 0) {
+          for (let i = 0; i < spans.length; i++) {
+            if (spans.eq(i).attr().length < 1) {
+              spans.eq(i).unwrap()
+            } else if (spans.eq(i).text().trim().length < 1) {
+              spans.eq(i).remove();
             }
-            els[i].removeAttribute('style')
           }
         }
+        html = z.html()
       }
-      return wrapper.innerHTML;
+      return html
     },
     toggleMode: function(mode, lib) {
       this.mode = mode
