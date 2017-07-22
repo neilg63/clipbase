@@ -2,7 +2,7 @@
 
 **Multi-platform Clipboard Manager.**
 
-This is another desktop clipboard manager developed using the Electron framework, which can be compiled to run on Linux, Max or Windows. 
+This is another desktop clipboard manager developed using the Electron framework, which can be compiled to run on Desktop Linux, Mac OS 10.9+ or Windows 7+. 
 
 It has with a few specialist features.
 
@@ -22,7 +22,7 @@ The final more polished version will include
 
 ## build instructions
 
-* Install Node JS 7.+
+* Install Node JS 7+
 * Install Electron for Node
 * Run: npm install
 * Follow electron build instructions for your [platform](https://electron.atom.io/docs/development/build-instructions-linux/)
