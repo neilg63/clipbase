@@ -95,70 +95,14 @@ String.prototype.captureBetweenTags = function(tagName = '') {
   return parts.pop().split(rgxEnd).shift();
 }
 
-function storeItem(key,data) {
-  var ts = Date.now() / 1000,sd = ts + ':';
-  if (typeof data == 'object') {
-    sd += 'obj:' + JSON.stringify(data);
-  } else {
-    sd += 'sca:' + data;
-  }
-  localStorage.setItem(key,sd);
-  return sd.length;
-}
-
-function getItem(key,maxAge,unit) {
-  var ts = Date.now() / 1000,obj={expired:true,valid:false,size:0},data=localStorage.getItem(key);
-  if (data) {
-    obj.size = data.length;
-    parts = data.split(':');
-    if (parts.length>2) {
-      if (!maxAge) {
-        maxAge = (86400 * 7);
-      }
-      switch (unit) {
-        case 'y':
-          maxAge *= (86400 * 365.25);
-          break;
-        case 'w':
-          maxAge *= (86400 * 7);
-          break;
-        case 'd':
-          maxAge *= 86400;
-          break;
-        case 'h':
-          maxAge *= 3600;
-          break;
-      }
-      obj.ts = parts.shift();
-      obj.ts = obj.ts - 0;
-      obj.type = parts.shift();
-      obj.data = parts.join(':');
-      if (obj.type == 'obj') {
-        obj.data = JSON.parse(obj.data); 
-      }
-      obj.valid = true;
-      if (obj.ts > (ts - maxAge)) {
-        obj.expired = false;
-      }
-    }
-  }
-  return obj;
-}
-
-function deleteItem(key) {
-  if (localStorage.getItem(key) !== null) {
-    localStorage.removeItem(key);
-    return true;
-  }
-  return false;
-}
-
 const dbReq = indexedDB.open('clipbase')
 var db, snippetsStore
 
 dbReq.onsuccess = function(e) {
   db = e.target.result;
-  console.log('connected to indexDB')
+  let ev = new CustomEvent('index-db')
+  window.dispatchEvent(ev)
+  ipcRenderer.send('index-db', true)
 }
 
 dbReq.onerror = function(e) {
@@ -172,10 +116,58 @@ dbReq.onupgradeneeded = function(e) {
   }
 }
 
-function storeSnippet(snippet) {
+function getObjectStore() {
   if (db) {
     let transaction = db.transaction(['snippets'],"readwrite")
-    let store = transaction.objectStore('snippets')
+    return transaction.objectStore('snippets')
+  }
+}
+
+function matchFilter(obj, filter) {
+  let valid = true
+  if (typeof filter === 'object') {
+    let keys = Object.keys(filter), k
+    for (let i = 0; i < keys.length; i++) {
+      k = keys[i]
+      valid = false
+      if (obj.hasOwnProperty(k)) {
+        valid = obj[k] == filter[k] 
+      }
+    }
+  }
+  return valid
+}
+
+function fetch(filter, fetchItems) {
+  let store = getObjectStore()
+
+  if (store) {
+    store.openCursor().onsuccess = function(event) {
+      if (event.target.result) {
+        let count = 0
+        let cursor = event.target.result
+        if (typeof cursor.value === 'object') {
+          if (cursor.value.text) {
+            if (matchFilter(cursor.value, filter)) {
+              let c = new Clip(cursor.value)
+              if (fetchItems instanceof Array) {
+                fetchItems.unshift(cursor.value)
+                if (fetchItems.length > 2) {
+                  fetchItems.sort( (a, b) => a.ts < b.ts)
+                }
+              }
+            }
+          }
+        }
+        cursor.continue()
+      }
+    }
+  }
+}
+
+function storeSnippet(snippet) {
+  let store = getObjectStore()
+  if (store) {
     let keys = Object.keys(snippet)
     let obj = {}, k
     for (let i = 0; i < keys.length; i++) {
@@ -186,48 +178,74 @@ function storeSnippet(snippet) {
   }
 }
 
-function getSnippets(filter) {
+function deleteSnippet(snippet) {
+  let store = getObjectStore()
+  if (store) {
+    let req = store.get(snippet.id)
+    req.onsuccess = (e) => {
+      store.delete(snippet.id)
+    }  
+  }
+}
 
-
+function updateSnippet(snippet) {
+  let store = getObjectStore()
+  if (store) {
+    let req = store.get(snippet.id)
+    req.onsuccess = (e) => {
+      store.put(snippet)
+    }  
+  }
 }
 
 class Clip {
-  constructor(first, format, html = '', index = 0) {
-    if (typeof first == 'string' && typeof format == 'string') {
-      this.text = first
-      this.format = format
-      this.html = html
-      this.id = index
-      this.title = ''
-    } else if (typeof first === 'object') {
-      if (first.text) {
-        this.text = first.text
-      }
-      if (first.format) {
-        this.format = first.format
-      }
-      if (first.html) {
-        this.html = first.html
-      } else {
-        this.html = ''
-      }
-      if (first.id) {
-        this.id = first.id
-      }
-      if (first.hasOwnProperty('tags') && first.tags instanceof Array) {
-        this.tags = first.tags
-      } else {
-        this.tags = []
-      }
-      if (first.title) {
-        this.title = first.title
-      }
+  constructor(obj) {
+    if (typeof obj !== 'object') {
+      obj = {}
+    }
+    if (obj.text) {
+      this.text = obj.text
+    } else {
+      this.text = ''
+    }
+    if (obj.lib) {
+      this.lib = obj.lib
+    } else {
+      this.lib = 'clips'
+    }
+    if (obj.format) {
+      this.format = obj.format
+    } else {
+      this.format = 'text'
+    }
+    if (obj.html) {
+      this.html = obj.html
+    } else {
+      this.html = ''
+    }
+    if (obj.id) {
+      this.id = obj.id
+    }
+    if (obj.hasOwnProperty('tags') && obj.tags instanceof Array) {
+      this.tags = obj.tags
+    } else {
+      this.tags = []
+    }
+    if (obj.title) {
+      this.title = obj.title
     }
     this.hasHtml = this.validHtml()
     if (!this.hasHtml) {
       this.html = ''
+      this.format = 'text'
     }
+    this.classes = [this.format]
     this.isLink = this.validUrl()
+    if (obj.ts instanceof Date) {
+      this.ts = obj.ts
+    } else {
+      this.ts = new Date()
+    }
   }
 
   validHtml () {
@@ -240,17 +258,48 @@ class Clip {
   }
 
   validUrl () {
-    return /^https?:\/\/\w+[a-z0-9_-]+(\.[a-z0-9_-]+)+\/?.*?\b$/i.test(this.text.trim())
+    return /^https?:\/\/\w+[a-z0-9_-]+(\.[a-z0-9_-]+)+\/?.*?$/i.test(this.text.trim())
   }
 
   addTag (tag) {
-    this.tags.push(tag)
+    var index = this.tags.indexOf(tag)
+    if (index < 0) {
+      this.tags.push(tag)
+    }
+  }
+
+  hasTitle () {
+    if (this.title) {
+      if (typeof this.title == 'string') {
+        return this.title.trim().length > 1
+      }
+    }
+    return false
   }
 
   removeTag (tag) {
     var index = this.tags.indexOf(tag)
     if (index >= 0) {
       this.tags.splice(index,1)
+    }
+  }
+
+  addClass (cn) {
+    var index = this.classes.indexOf(cn)
+    if (index < 0) {
+      this.classes.push(cn)
+    }
+  }
+
+  removeClass (cn) {
+    var index = this.classes.indexOf(cn)
+    if (index >= 0) {
+      this.classes.splice(index,1)
+    }
+  }
+  setLib (lib) {
+    if (typeof lib === 'string') {
+      this.lib = lib
     }
   }
 }
@@ -273,6 +322,13 @@ Vue.filter('fileSize', function (value) {
       }
     }
     return value
+})
+
+Vue.filter('dmy', function (value) {
+  if (value instanceof Date) {
+    let m = moment(value)
+    return m.format('HH:mm:ss DD/MM/YYYY')
+  }
 })
 
 const vue = new Vue({
@@ -298,16 +354,16 @@ const vue = new Vue({
     textFilter: '',
     currItem: {
       index: 0,
-      text: ''
+      text: '',
+      format: 'text'
     },
     editText: '',
     editFocus: false,
     editMode: 'clips',
+    editFormat: 'text',
     editClasses: ['hidden'],
     previewText: '',
-    previewClasses: ['hidden'],
-    baseSize: 0,
-    dummy: {}
+    previewClasses: ['hidden']
   },
   created: function() {
     this.config = config['en']
@@ -316,23 +372,18 @@ const vue = new Vue({
         this.config[k] = config.core[k]
       }
     }
-    let stored = getItem('clips')
-    if (stored.valid) {
-      if (stored.data instanceof Array) {
-        this.clips = stored.data
-        this.updateClipClasses()
-        this.numClips = this.clips.length
-        this.baseSize = stored.size
-      }
-    }
-    stored = getItem(this.snippetsLib)
-    if (stored.valid) {
-      if (stored.data instanceof Array) {
-        this.snippets = stored.data
-        this.updateClipClasses('snippets')
-        this.numSnippets = this.snippets.length
-      }
-    }
+    window.addEventListener('index-db',(e) => {
+      vue.fetchClips()
+      vue.fetchSnippets()
+      setTimeout(_ => {
+        console.log(this.clips[0])
+      },2000)
+    })
+
+    this.currItem = new Clip(this.currItem)
+    //this.loadLib('clips')
+    //this.loadLib('snippets')
+
     ipcRenderer.on('clip-stack', (event, clip) => {
       if (vue.recopied === false && clip instanceof Object && clip.hasOwnProperty('text')) {
         clip.hasHtml = vue.validHtml(clip)
@@ -348,6 +399,7 @@ const vue = new Vue({
           let replace = (vue.numClips > 0 && clip.text === vue.clips[0].text)
           clip.id = replace? vue.clips.length : vue.clips.length + 1
           clip = new Clip(clip)
+          console.log(clip.isLink)
           if (clip.isLink) {
             axios.get(clip.text)
             .then(function (response) {
@@ -358,6 +410,8 @@ const vue = new Vue({
                     let title = str.captureBetweenTags('title')
                     if (typeof title == 'string' && title.trim().length > 1) {
                       clip.title = title.trim()
+                      console.log(clip)
+                      updateSnippet(clip)
                     }
                   }
                 }
@@ -372,11 +426,9 @@ const vue = new Vue({
           } else {
             vue.clips.unshift(clip)
           }
-          setTimeout(_ => {
-            console.log(clip)
-          },3000)
-          vue.baseSize = storeItem('clips', this.clips)
-          vue.numClips = vue.clips.length  
+          //vue.baseSize = storeItem('clips', this.clips)
+          vue.numClips = vue.clips.length
+          storeSnippet(clip)
         }
       }
     })
@@ -433,8 +485,7 @@ const vue = new Vue({
       }
     })
     setTimeout(_ => {
-      let sn = new Clip('some text','html',"<strong>some text</strong>")
-      storeSnippet(sn)
+      let rn = Math.ceil(Math.random() * 1000);
       let recentClips = []
       if (vue.clips.length < 10) {
         recentClips = vue.clips
@@ -468,6 +519,12 @@ const vue = new Vue({
     }
   },
   methods: {
+    fetchClips: function() {
+      fetch({lib: 'clips'},this.clips)
+    },
+    fetchSnippets: function() {
+      fetch({lib: this.snippetsLib},this.snippets)
+    },
     copyText: function(index, transform = '') {
       this.copyItem(index,'text',transform)
     },
@@ -539,6 +596,7 @@ const vue = new Vue({
       if (this.currItem) {
         if (this.currItem.hasHtml) {
           this.editText = this.cleanHtmlString(this.currItem.html)
+          this.editFormat = 'html'
         }
       }
     },
@@ -551,14 +609,11 @@ const vue = new Vue({
     deleteItem: function(index, mode) {
       let items = mode === 'snippets'? this.snippets : this.clips
       if (index < items.length) {
+        deleteSnippet(items[index])
         items.splice(this.currIndex,1)
         let lib = 'clips'
         if (mode === 'snippets') {
           lib = this.snippetsLib
-        } 
-        let size = storeItem(lib,items)
-        if (lib === 'clips') {
-          this.baseSize = size
         }
         if (mode === 'snippets') {
           this.numSnippets = items.length
@@ -679,8 +734,9 @@ const vue = new Vue({
         if (clip) {
           this.snippets.unshift(clip)
           this.numSnippets = this.snippets.length
-          if (typeof this.snippetsLib == 'string') {
-            storeItem(this.snippetsLib, this.snippets)
+          if (clip.id) {
+            clip.lib = this.snippetsLib
+            updateSnippet(clip)
           }
           this.clips.splice(index,1)
         }
@@ -700,12 +756,14 @@ const vue = new Vue({
       if (index < items.length) {
         let item = items[index]
         if (item instanceof Object) {
-          this.currItem = item
+          this.currItem = new Clip(item)
           this.editIndex = index
           this.editMode = mode
+          this.editFormat = 'text'
           this.editText = this.currItem.text
           this.editClasses = ['overlay']
           this.editFocus = true
+          
         }
       } 
     },
@@ -714,9 +772,15 @@ const vue = new Vue({
       if (this.editIndex < items.length) {
         let item = items[this.editIndex]
         if (item instanceof Object) {
-          item.text = this.editText
+          if (this.editFormat === 'html') {
+            item.html = this.editText
+          } else {
+            item.text = this.editText
+          }
           this.editClasses = ['hidden']
           this.editFocus = false
+          item.lib = this.editMode == 'snippets'? this.snippetsLib : 'clips'
+          updateSnippet(item)
         }
       }
     },
